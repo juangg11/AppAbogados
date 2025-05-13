@@ -1,0 +1,48 @@
+# Este archivo docker-compose.yml es para desplegar Budibase y MySQL en contenedores Docker.
+# Asegúrate de tener Docker y Docker Compose instalados en tu sistema.
+# Puedes ejecutar este archivo con el comando: docker-compose up -d
+services:
+  budibase:
+    image: budibase/budibase:latest
+    container_name: ${BUDINAME}                  # Nombre del contenedor Budibase
+    restart: unless-stopped
+    ports:
+      - "${BUDIPORT}:80"                         # Budibase estará accesible en el puerto BUDIPORT
+    environment:
+      - JWT_SECRET=${BUDIPASSWORD}               # Clave secreta para JWT (cámbiala por una segura)
+      - MINIO_ACCESS_KEY=${BUDIPASSWORD}         # Clave de acceso para MinIO 
+      - MINIO_SECRET_KEY=${BUDIPASSWORD}         # Clave secreta para MinIO
+      - COUCHDB_USER=userCouchDB                 # Usuario de CouchDB
+      - COUCHDB_PASSWORD=${BUDIPASSWORD}         # Contraseña de CouchDB
+      - COUCHDB_URL=http://couchdb:5984          # URL de CouchDB
+      - INTERNAL_API_KEY=${BUDIPASSWORD}         # Clave API interna para Budibase
+    volumes:
+      - ./budibase_data:/data                    # Bind mount para los datos de Budibase
+      - ./budibase_config:/config                # Bind mount para la configuración de Budibase
+    # - ./budibase_logs:/var/log/budibase        # Bind mount para los logs de Budibase (opcional)
+    # - ./budibase_backups:/var/backups/budibase # Bind mount para los backups de Budibase (opcional)
+    depends_on:
+      - mysql
+    networks:
+      - budibase-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: ${BUDINAME}_mysql    # Nombre del contenedor MySQL
+    restart: unless-stopped
+    ports:
+      - "${MYSQLPORT}:3306"              # MySQL estará accesible en el puerto 3306
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQLROOT}  # Contraseña de root para MySQL
+      MYSQL_DATABASE: budibase_db        # Base de datos predeterminada
+      MYSQL_USER: ${MYSQLUSER}           # Usuario para Budibase
+      MYSQL_PASSWORD: ${MYSQLPASS}       # Contraseña para Budibase
+    volumes:
+      - ./mysql_data:/var/lib/mysql  # Volumen para los datos de MySQL
+    networks:
+      - budibase-network
+
+
+networks:
+  budibase-network:
+    driver: bridge
